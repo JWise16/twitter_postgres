@@ -9,16 +9,15 @@ test-data.zip
 
 echo 'load normalized'
 for file in $files; do
-    python3 load_tweets.py --db postgresql://postgres:pass@localhost:6968/postgres --inputs $file
+    echo "Processing normalized file: $file"
+    python3 load_tweets.py --db "postgresql://postgres:pass@localhost:6968/postgres" --inputs "$file"
 done
 
 echo 'load denormalized'
 for file in $files; do
-    zipinfo -1 $file | while read filename; do
-        unzip -p "$file" "$filename" | psql -h localhost -p 6969 -U postgres -d postgres -c "COPY tweets FROM stdin WITH (FORMAT csv, HEADER true);"
-    done
+    echo "Processing denormalized file: $file"
+    unzip -p "$file" | sed 's/\\u0000//g' | iconv -f utf-8 -t utf-8 -c | psql "postgresql://postgres:pass@localhost:6969" -c "COPY tweets_jsonb (data) FROM STDIN csv quote e'\x01' delimiter e'\x02';"
 done
-
 
 # Two common painpoints on assignment
 # 1.) Looping over $files which only has a single file - makes next assignment easy
